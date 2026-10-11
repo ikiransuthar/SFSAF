@@ -73,7 +73,16 @@ input{width:90px;min-height:44px;border-radius:12px;border:1px solid var(--line)
 </div></div>
 <script>
 const $=id=>document.getElementById(id),MAX=100000,D=[[0,-1],[1,0],[0,1],[-1,0]];
-let L,S,mv,lives,hist,B=1,lock=0,ht;
+let L,S,mv,lives,hist,B=1,lock=0,ht,AC,muted=0;
+try{muted=localStorage.getItem('amsound')==='0'}catch(e){}
+function tone(f,s,d,ty,v,e){const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+s;o.type=ty;o.frequency.setValueAtTime(f,t);if(e)o.frequency.exponentialRampToValueAtTime(e,t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d)}
+function snd(k){if(muted)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume();
+if(k=='slide'){tone(260,0,.4,'sine',.2,1100);tone(180,0,.3,'triangle',.08,700)}
+else if(k=='bump'){tone(150,0,.2,'square',.12,60)}
+else if(k=='win'){[523,659,784,1047].forEach((f,i)=>tone(f,i*.13,.35,'triangle',.22))}
+else if(k=='fail'){[392,330,262].forEach((f,i)=>tone(f,i*.2,.35,'sawtooth',.1))}
+else if(k=='tap'){tone(700,0,.07,'sine',.12)}
+else if(k=='hint'){tone(880,0,.12,'sine',.15);tone(1175,.1,.18,'sine',.15)}}catch(e){}}
 function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 // Difficulty: bigger grid, denser board, longer arrows as the level rises.
 function cfg(l){const n=Math.min(16,7+Math.floor(Math.sqrt(l-1)/1.2));return{n,goal:Math.floor(n*n*Math.min(.88,.5+l/3000+n*.01)),ml:Math.min(16,3+Math.floor(l/25))}}
@@ -103,26 +112,26 @@ $('hp').innerHTML=[0,1,2].map(i=>`<svg width="24" height="24" viewBox="0 0 24 24
 $('hp').setAttribute('aria-label',lives+' lives left')}
 function show(h){$('ov').innerHTML='<div class="m">'+h+'</div>';$('ov').hidden=0}
 const star=on=>`<svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 15,9 22,9.3 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9.3 9,9" style="fill:${on?'#f5a524':'none'};stroke:#f5a524;stroke-width:1.5;stroke-linejoin:round"/></svg>`;
-function win(){B=Math.max(B,Math.min(MAX,L+1));save();
+function win(){snd('win');B=Math.max(B,Math.min(MAX,L+1));save();
 show(`<h2>Level ${L.toLocaleString()} cleared</h2><div class="st" aria-label="${lives} of 3 stars">${[1,2,3].map(i=>star(i<=lives)).join('')}</div><p>${mv} moves</p>`+(L<MAX?'<button class="btn pri" data-a="n">Next level</button>':'<p>You cleared all 100,000 levels!</p>'))}
-function fail(){show('<h2>Out of lives</h2><p>Look for arrows with a clear path first.</p><button class="btn pri" data-a="r">Try again</button>')}
+function fail(){snd('fail');show('<h2>Out of lives</h2><p>Look for arrows with a clear path first.</p><button class="btn pri" data-a="r">Try again</button>')}
 $('bd').addEventListener('click',e=>{const g=e.target.closest('.ar');if(!g||lock)return;const i=+g.dataset.i,a=S.A[i];if(!a.on)return;
-if(canMove(i)){a.on=0;a.P.forEach(([x,y])=>S.g[y*S.n+x]=-1);hist.push(i);mv++;const t=S.n+2;
+if(canMove(i)){snd('slide');a.on=0;a.P.forEach(([x,y])=>S.g[y*S.n+x]=-1);hist.push(i);mv++;const t=S.n+2;
 g.style.transition='transform .5s cubic-bezier(.5,0,1,1),opacity .5s';void g.getBoundingClientRect();
 g.style.transform=`translate(${D[a.d][0]*t}px,${D[a.d][1]*t}px)`;g.style.opacity=0;hud();
 if(!S.A.some(a=>a.on)){lock=1;setTimeout(win,650)}}
-else{g.classList.remove('bad');void g.getBoundingClientRect();g.classList.add('bad');setTimeout(()=>g.classList.remove('bad'),700);
+else{snd('bump');g.classList.remove('bad');void g.getBoundingClientRect();g.classList.add('bad');setTimeout(()=>g.classList.remove('bad'),700);
 lives--;hud();if(lives<=0){lock=1;setTimeout(fail,600)}}});
-$('un').onclick=()=>{if(lock||!hist.length)return;const i=hist.pop(),a=S.A[i],g=$('a'+i);a.on=1;a.P.forEach(([x,y])=>S.g[y*S.n+x]=i);
+$('un').onclick=()=>{snd('tap');if(lock||!hist.length)return;const i=hist.pop(),a=S.A[i],g=$('a'+i);a.on=1;a.P.forEach(([x,y])=>S.g[y*S.n+x]=i);
 g.style.transition='none';g.style.transform='';g.style.opacity='';mv--;hud()};
-$('rs').onclick=()=>start(L);
-$('ht').onclick=()=>{if(lock)return;const i=S.A.findIndex((a,k)=>a.on&&canMove(k));if(i<0)return;const g=$('a'+i);g.classList.add('hint');clearTimeout(ht);ht=setTimeout(()=>g.classList.remove('hint'),1600)};
-$('menu').onclick=()=>show(`<h2>Menu</h2><p>Current level: ${L.toLocaleString()}</p><p>Highest level reached: ${B.toLocaleString()} of 100,000</p><button class="btn pri" data-a="x">Resume</button>`);
-$('ov').addEventListener('click',e=>{const a=e.target.dataset.a;if(!a)return;
-if(a=='n')start(L+1);else if(a=='r')start(L);else if(a=='x')$('ov').hidden=1;});
+$('rs').onclick=()=>{snd('tap');start(L)};
+$('ht').onclick=()=>{if(lock)return;const i=S.A.findIndex((a,k)=>a.on&&canMove(k));if(i<0)return;snd('hint');const g=$('a'+i);g.classList.add('hint');clearTimeout(ht);ht=setTimeout(()=>g.classList.remove('hint'),1600)};
+$('menu').onclick=()=>{snd('tap');show(`<h2>Menu</h2><p>Current level: ${L.toLocaleString()}</p><p>Highest level reached: ${B.toLocaleString()} of 100,000</p><button class="btn pri" data-a="s">Sound: ${muted?'Off':'On'}</button><button class="btn pri" data-a="x">Resume</button>`)};
+$('ov').addEventListener('click',e=>{const a=e.target.dataset.a;if(!a)return;if(a!='s')snd('tap');
+if(a=='n')start(L+1);else if(a=='r')start(L);else if(a=='x')$('ov').hidden=1;else if(a=='s'){muted=!muted;try{localStorage.setItem('amsound',muted?'0':'1')}catch(e){}e.target.textContent='Sound: '+(muted?'Off':'On');snd('tap')}});
 try{const s=JSON.parse(localStorage.getItem('arrowmaze')||'{}');B=Math.min(MAX,s.b||1);L=s.l||1}catch(e){L=1}
 start(L);
-$('wb').onclick=()=>{$('wl').classList.add('out');setTimeout(()=>$('wl').remove(),600)};
+$('wb').onclick=()=>{snd('hint');$('wl').classList.add('out');setTimeout(()=>$('wl').remove(),600)};
 </script>
 </body>
 </html>
