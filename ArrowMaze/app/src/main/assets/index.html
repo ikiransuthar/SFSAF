@@ -75,7 +75,8 @@ input{width:90px;min-height:44px;border-radius:12px;border:1px solid var(--line)
 const $=id=>document.getElementById(id),MAX=100000,D=[[0,-1],[1,0],[0,1],[-1,0]];
 let L,S,mv,lives,hist,B=1,lock=0,ht,AC,muted=0;
 try{muted=localStorage.getItem('amsound')==='0'}catch(e){}
-function tone(f,s,d,ty,v,e){const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+s;o.type=ty;o.frequency.setValueAtTime(f,t);if(e)o.frequency.exponentialRampToValueAtTime(e,t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d)}
+function tone(f,s,d,ty,v,e){const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+s;o.type=ty;o.frequency.setValueAtTime(f,t);if(e)o.frequency.exponentialRampToValueAtTime(e,t+d);g.gain.setValueAtTime(Math.min(1,v*2.5),t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d)}
+['pointerdown','touchstart','click'].forEach(ev=>document.addEventListener(ev,()=>{if(muted)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!='running')AC.resume()}catch(e){}},{passive:true}));
 function snd(k){if(muted)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume();
 if(k=='slide'){tone(260,0,.4,'sine',.2,1100);tone(180,0,.3,'triangle',.08,700)}
 else if(k=='bump'){tone(150,0,.2,'square',.12,60)}
