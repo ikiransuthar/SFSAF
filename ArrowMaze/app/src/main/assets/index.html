@@ -45,11 +45,10 @@ input{width:90px;min-height:44px;border-radius:12px;border:1px solid var(--line)
 @keyframes up{to{opacity:1;transform:none}}
 .wi{width:84px;height:84px;margin-bottom:14px;box-shadow:0 12px 40px rgba(31,79,216,.55);border-radius:22px}
 .wk{margin:0;font-size:13px;letter-spacing:.3em;color:#9db4f0}
-.w1{margin:0;font-size:40px;font-weight:800}
+.w1{margin:12px 0 0;font-size:38px;font-weight:800}
 .w2{margin:0;font-size:17px;color:#c5d1ee}
 .wr{width:56px;height:3px;border-radius:2px;background:#7a9dff;margin:14px 0 6px}
-.wn{margin:0;font-size:34px;font-weight:800;color:#c9d6ff;background:linear-gradient(90deg,#fff,#9db4f0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.wb{margin-top:32px;min-height:54px;padding:0 44px;border-radius:27px;border:0;background:#fff;color:#14161a;cursor:pointer}
+.wn{margin:0;font-size:14px;font-weight:500;letter-spacing:.1em;color:#9db4f0}
 @media (prefers-reduced-motion:reduce){.wc>*{animation:none;opacity:1;transform:none}}
 </style>
 </head>
@@ -64,12 +63,8 @@ input{width:90px;min-height:44px;border-radius:12px;border:1px solid var(--line)
 <div id="ov" hidden></div>
 <div id="wl"><div class="wc">
 <svg class="wi" viewBox="0 0 84 84" aria-hidden="true"><rect width="84" height="84" rx="22" fill="#1f4fd8"/><path d="M22 56V36h30" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M48 24l16 12-16 12z" fill="#fff"/></svg>
-<p class="wk" style="animation-delay:.15s">WELCOME</p>
-<h1 class="w1" style="animation-delay:.3s">Hey Founder,</h1>
-<p class="w2" style="animation-delay:.45s">Welcome to Arrow Maze</p>
-<div class="wr" style="animation-delay:.6s"></div>
-<p class="wn" style="animation-delay:.75s">Kiran Suthar</p>
-<button class="wb" id="wb" style="animation-delay:1s">Let's play</button>
+<h1 class="w1" style="animation-delay:.25s">Arrow Maze</h1>
+<p class="wn" style="animation-delay:.5s">by ikiransuthar</p>
 </div></div>
 <script>
 const $=id=>document.getElementById(id),MAX=100000,D=[[0,-1],[1,0],[0,1],[-1,0]];
@@ -85,28 +80,51 @@ else if(k=='fail'){[392,330,262].forEach((f,i)=>tone(f,i*.2,.35,'sawtooth',.1))}
 else if(k=='tap'){tone(700,0,.07,'sine',.12)}
 else if(k=='hint'){tone(880,0,.12,'sine',.15);tone(1175,.1,.18,'sine',.15)}}catch(e){}}
 function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-// Difficulty: bigger grid, denser board, longer arrows as the level rises.
-function cfg(l){const n=Math.min(16,7+Math.floor(Math.sqrt(l-1)/1.2));return{n,goal:Math.floor(n*n*Math.min(.88,.5+l/3000+n*.01)),ml:Math.min(16,3+Math.floor(l/25))}}
+// Difficulty: bigger grid, denser board, more complex shapes as the level rises.
+function cfg(l){const n=Math.min(16,7+Math.floor(Math.sqrt(l-1)/1.2));return{n,goal:Math.floor(n*n*Math.min(.88,.5+l/3000+n*.01)),m:Math.min(6,2+Math.floor(l/40))}}
+// Shape templates as [turn, length] segments: straight, L, Z/S, U, stairs, zigzag, spiral, snake.
+const Tm={
+s:(q,m)=>[[0,q(m)+1]],
+l:(q,m)=>[[0,q(m)],[1,q(m)]],
+z:(q,m)=>[[0,q(m)],[1,q(m)],[-1,q(m)]],
+u:(q,m)=>[[0,q(m)],[1,q(2)],[1,q(m)]],
+t:(q,m)=>{const a=[[0,1],[1,1]];for(let k=q(3);k>0;k--)a.push([-1,1],[1,1]);return a},
+g:(q,m)=>[[0,q(m)],[1,q(m)],[-1,q(m)],[1,q(m)]],
+p:(q,m)=>[[0,q(m)+1],[1,q(m)+1],[1,q(m)],[1,q(m)]],
+k:(q,m)=>{const a=[[0,q(m)]];for(let i=2+q(3);i>0;i--)a.push([q(2)==1?1:-1,q(m)]);return a}};
+function pool(l){return l>=20?['l','z','u','t','g','p','k','k']:l>=8?['s','l','z','u','t','g']:l>=3?['s','l','l','z','u']:['s','l','l']}
 // Each arrow is placed with a clear exit ray, so removing arrows in reverse order always solves the level.
-function gen(l){const{n,goal,ml}=cfg(l),r=rng(l*7919+13),g=Array(n*n).fill(-1),A=[];let cells=0,tries=0;
-while((cells<goal||!A.length)&&tries++<12000){const len=2+(r()*r()*(ml-1)|0);let x=r()*n|0,y=r()*n|0;if(g[y*n+x]>=0)continue;
-const P=[[x,y]],seen=new Set([y*n+x]);let d=0;
-while(P.length<len){const o=[0,1,2,3].filter(k=>{const a=x+D[k][0],b=y+D[k][1];return a>=0&&b>=0&&a<n&&b<n&&g[b*n+a]<0&&!seen.has(b*n+a)});if(!o.length)break;
-d=o[r()*o.length|0];x+=D[d][0];y+=D[d][1];P.push([x,y]);seen.add(y*n+x)}
-if(P.length<2)continue;
-let a=x+D[d][0],b=y+D[d][1],ok=1;while(a>=0&&b>=0&&a<n&&b<n){if(g[b*n+a]>=0||seen.has(b*n+a)){ok=0;break}a+=D[d][0];b+=D[d][1]}
-if(!ok)continue;P.forEach(([p,q])=>g[q*n+p]=A.length);A.push({P,d,on:1});cells+=P.length}
+function gen(l){const{n,goal,m}=cfg(l),r=rng(l*7919+13),q=k=>1+(r()*k|0),pl=pool(l),g=Array(n*n).fill(-1),A=[];let cells=0,tries=0;
+while((cells<goal||!A.length)&&tries++<12000){let x=r()*n|0,y=r()*n|0;if(g[y*n+x]>=0)continue;
+const tp=Tm[pl[r()*pl.length|0]](q,m),mir=r()<.5?-1:1,P=[[x,y]],seen=new Set([y*n+x]);let d=r()*4|0,ld=d,ok=1;
+out:for(const[tu,ln]of tp){d=(d+tu*mir+8)%4;for(let k=0;k<ln;k++){const a=x+D[d][0],b=y+D[d][1];if(a<0||b<0||a>=n||b>=n||g[b*n+a]>=0||seen.has(b*n+a)){ok=0;break out}x=a;y=b;P.push([x,y]);seen.add(y*n+x);ld=d}}
+if(P.length<2||(!ok&&tries<7000))continue;
+let rx=x+D[ld][0],ry=y+D[ld][1],f=1;while(rx>=0&&ry>=0&&rx<n&&ry<n){if(g[ry*n+rx]>=0||seen.has(ry*n+rx)){f=0;break}rx+=D[ld][0];ry+=D[ld][1]}
+if(!f)continue;P.forEach(([p,q])=>g[q*n+p]=A.length);A.push({P,d:ld,on:1});cells+=P.length}
 return{n,A,g}}
 function canMove(i){const a=S.A[i];let[x,y]=a.P[a.P.length-1];const[dx,dy]=D[a.d],n=S.n;x+=dx;y+=dy;
 while(x>=0&&y>=0&&x<n&&y<n){if(S.g[y*n+x]>=0)return false;x+=dx;y+=dy}return true}
 function save(){B=Math.max(B,L);try{localStorage.setItem('arrowmaze',JSON.stringify({l:L,b:B}))}catch(e){}}
 function start(l){L=Math.max(1,Math.min(MAX,l|0||1));S=gen(L);mv=0;lives=3;hist=[];lock=0;$('ov').hidden=1;draw();hud();save()}
+const hd=(cx,cy,ux,uy)=>{const f=(u,v)=>(cx+ux*u-uy*v).toFixed(2)+','+(cy+uy*u+ux*v).toFixed(2);return f(.48,0)+' '+f(.04,.27)+' '+f(.04,-.27)};
+function shp(a){const[x,y]=a.P[a.P.length-1],[dx,dy]=D[a.d];return[a.P.map(([x,y])=>(x+.5)+','+(y+.5)).join(' '),hd(x+.5,y+.5,dx,dy)]}
 function draw(){const n=S.n;let h='';
 for(let y=0;y<n;y++)for(let x=0;x<n;x++)h+=`<circle cx="${x+.5}" cy="${y+.5}" r=".05"/>`;
-S.A.forEach((a,i)=>{const pts=a.P.map(([x,y])=>(x+.5)+','+(y+.5)).join(' '),[x,y]=a.P[a.P.length-1],[dx,dy]=D[a.d],cx=x+.5,cy=y+.5,
-f=(u,v)=>(cx+dx*u-dy*v).toFixed(2)+','+(cy+dy*u+dx*v).toFixed(2);
-h+=`<g class="ar" id="a${i}" data-i="${i}"><polyline class="h" points="${pts}"/><polyline class="v" points="${pts}"/><polygon class="v" points="${f(.48,0)} ${f(.04,.27)} ${f(.04,-.27)}"/></g>`});
+S.A.forEach((a,i)=>{const[pts,hp]=shp(a);
+h+=`<g class="ar" id="a${i}" data-i="${i}"><polyline class="h" points="${pts}"/><polyline class="v" points="${pts}"/><polygon class="v" points="${hp}"/></g>`});
 $('bd').setAttribute('viewBox',`0 0 ${n} ${n}`);$('bd').innerHTML=h}
+// The arrow slides along its own shape like a snake: bends straighten out, then it exits along its head direction.
+function glide(i){const a=S.A[i],g=$('a'+i),[dx,dy]=D[a.d],pts=a.P.map(([x,y])=>[x+.5,y+.5]),nb=pts.length-1,cum=[0];
+for(let k=1;k<pts.length;k++)cum.push(cum[k-1]+Math.abs(pts[k][0]-pts[k-1][0])+Math.abs(pts[k][1]-pts[k-1][1]));
+const body=cum[nb],ext=S.n+body+3,e=pts[nb];pts.push([e[0]+dx*ext,e[1]+dy*ext]);cum.push(body+ext);
+const at=s=>{let k=1;while(k<cum.length-1&&cum[k]<s)k++;const t=(s-cum[k-1])/(cum[k]-cum[k-1]||1);return[pts[k-1][0]+(pts[k][0]-pts[k-1][0])*t,pts[k-1][1]+(pts[k][1]-pts[k-1][1])*t,k]};
+const smax=body+S.n+2,dur=Math.max(380,Math.min(1000,smax*55)),t0=performance.now(),vs=g.querySelectorAll('.v');g.querySelector('.h').style.display='none';
+const step=now=>{if(!g.isConnected)return;const t=Math.min(1,(now-t0)/dur),s=smax*t*t,A0=at(s),B=at(s+body),w=[[A0[0],A0[1]]];
+for(let k=A0[2];k<B[2];k++)w.push(pts[k]);w.push([B[0],B[1]]);
+vs[0].setAttribute('points',w.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' '));
+const k=B[2];vs[1].setAttribute('points',hd(B[0],B[1],Math.sign(pts[k][0]-pts[k-1][0]),Math.sign(pts[k][1]-pts[k-1][1])));
+if(t<1)a.raf=requestAnimationFrame(step);else g.style.display='none'};
+a.raf=requestAnimationFrame(step);return dur}
 function hud(){$('lv').textContent=L.toLocaleString();$('mv').textContent='Moves '+mv;
 $('left').textContent='Arrows left '+S.A.filter(a=>a.on).length;
 $('hp').innerHTML=[0,1,2].map(i=>`<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="fill:${i<lives?'var(--bad)':'none'};stroke:var(--bad);stroke-width:2"><path d="M12 21s-8-5.3-8-11a4.5 4.5 0 018-2.7A4.5 4.5 0 0120 10c0 5.7-8 11-8 11z"/></svg>`).join('');
@@ -117,14 +135,12 @@ function win(){snd('win');B=Math.max(B,Math.min(MAX,L+1));save();
 show(`<h2>Level ${L.toLocaleString()} cleared</h2><div class="st" aria-label="${lives} of 3 stars">${[1,2,3].map(i=>star(i<=lives)).join('')}</div><p>${mv} moves</p>`+(L<MAX?'<button class="btn pri" data-a="n">Next level</button>':'<p>You cleared all 100,000 levels!</p>'))}
 function fail(){snd('fail');show('<h2>Out of lives</h2><p>Look for arrows with a clear path first.</p><button class="btn pri" data-a="r">Try again</button>')}
 $('bd').addEventListener('click',e=>{const g=e.target.closest('.ar');if(!g||lock)return;const i=+g.dataset.i,a=S.A[i];if(!a.on)return;
-if(canMove(i)){snd('slide');a.on=0;a.P.forEach(([x,y])=>S.g[y*S.n+x]=-1);hist.push(i);mv++;const t=S.n+2;
-g.style.transition='transform .5s cubic-bezier(.5,0,1,1),opacity .5s';void g.getBoundingClientRect();
-g.style.transform=`translate(${D[a.d][0]*t}px,${D[a.d][1]*t}px)`;g.style.opacity=0;hud();
-if(!S.A.some(a=>a.on)){lock=1;setTimeout(win,650)}}
+if(canMove(i)){snd('slide');a.on=0;a.P.forEach(([x,y])=>S.g[y*S.n+x]=-1);hist.push(i);mv++;const dur=glide(i);hud();
+if(!S.A.some(a=>a.on)){lock=1;setTimeout(win,dur+250)}}
 else{snd('bump');g.classList.remove('bad');void g.getBoundingClientRect();g.classList.add('bad');setTimeout(()=>g.classList.remove('bad'),700);
 lives--;hud();if(lives<=0){lock=1;setTimeout(fail,600)}}});
-$('un').onclick=()=>{snd('tap');if(lock||!hist.length)return;const i=hist.pop(),a=S.A[i],g=$('a'+i);a.on=1;a.P.forEach(([x,y])=>S.g[y*S.n+x]=i);
-g.style.transition='none';g.style.transform='';g.style.opacity='';mv--;hud()};
+$('un').onclick=()=>{snd('tap');if(lock||!hist.length)return;const i=hist.pop(),a=S.A[i],g=$('a'+i);cancelAnimationFrame(a.raf);a.on=1;a.P.forEach(([x,y])=>S.g[y*S.n+x]=i);
+const sh=shp(a),vs=g.querySelectorAll('.v');vs[0].setAttribute('points',sh[0]);vs[1].setAttribute('points',sh[1]);g.querySelector('.h').style.display='';g.style.display='';mv--;hud()};
 $('rs').onclick=()=>{snd('tap');start(L)};
 $('ht').onclick=()=>{if(lock)return;const i=S.A.findIndex((a,k)=>a.on&&canMove(k));if(i<0)return;snd('hint');const g=$('a'+i);g.classList.add('hint');clearTimeout(ht);ht=setTimeout(()=>g.classList.remove('hint'),1600)};
 $('menu').onclick=()=>{snd('tap');show(`<h2>Menu</h2><p>Current level: ${L.toLocaleString()}</p><p>Highest level reached: ${B.toLocaleString()} of 100,000</p><button class="btn pri" data-a="s">Sound: ${muted?'Off':'On'}</button><button class="btn pri" data-a="x">Resume</button>`)};
@@ -132,7 +148,7 @@ $('ov').addEventListener('click',e=>{const a=e.target.dataset.a;if(!a)return;if(
 if(a=='n')start(L+1);else if(a=='r')start(L);else if(a=='x')$('ov').hidden=1;else if(a=='s'){muted=!muted;try{localStorage.setItem('amsound',muted?'0':'1')}catch(e){}e.target.textContent='Sound: '+(muted?'Off':'On');snd('tap')}});
 try{const s=JSON.parse(localStorage.getItem('arrowmaze')||'{}');B=Math.min(MAX,s.b||1);L=s.l||1}catch(e){L=1}
 start(L);
-$('wb').onclick=()=>{snd('hint');$('wl').classList.add('out');setTimeout(()=>$('wl').remove(),600)};
+const hs=()=>{$('wl').classList.add('out');setTimeout(()=>$('wl')&&$('wl').remove(),600)};$('wl').onclick=hs;setTimeout(hs,2400);
 </script>
 </body>
 </html>
