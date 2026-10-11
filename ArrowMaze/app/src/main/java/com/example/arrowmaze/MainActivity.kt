@@ -15,6 +15,7 @@ class MainActivity : AppCompatActivity() {
         web = WebView(this)
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true // saves level progress
+        web.settings.mediaPlaybackRequiresUserGesture = false // lets game sounds play
         web.webViewClient = WebViewClient()
         setContentView(web)
         web.loadUrl("file:///android_asset/index.html")
